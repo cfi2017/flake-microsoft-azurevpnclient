@@ -22,6 +22,17 @@
             pname = "microsoft-azurevpnclient";
             version = "3.0.0";
 
+            passthru.wrapper = pkgs.writeShellScript "microsoft-azurevpnclient-wrapper" ''
+              export PATH="${pkgs.openvpn}/bin:${pkgs.zenity}/bin:$PATH"
+              export LD_LIBRARY_PATH="${passthru.installPath}/lib:${nixpkgs.lib.makeLibraryPath buildInputs}:$LD_LIBRARY_PATH"
+              exec ${pkgs.bubblewrap}/bin/bwrap \
+                --dev-bind / / \
+                --bind ${renamedCerts}/ssl/certs /etc/ssl/certs \
+                /run/wrappers/bin/microsoft-azurevpnclient-wrapped "$@"
+            '';
+
+            passthru.installPath = placeholder "out";
+
             src = pkgs.fetchurl {
               url = "https://packages.microsoft.com/ubuntu/22.04/prod/pool/main/m/microsoft-azurevpnclient/microsoft-azurevpnclient_${version}_amd64.deb";
               hash = "sha256-nl02BDPR03TZoQUbspplED6BynTr6qNRVdHw6fyUV3s=";
@@ -101,16 +112,8 @@
               ln -s $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient $out/bin/microsoft-azurevpnclient
               ln -s $out/opt/microsoft/microsoft-azurevpnclient/lib $out
 
-              makeWrapper /run/wrappers/bin/microsoft-azurevpnclient-wrapped $out/bin/microsoft-azurevpnclient \
-                --prefix PATH : "${pkgs.openvpn}/bin:${pkgs.zenity}/bin" \
-                --prefix LD_LIBRARY_PATH : "$out/lib:${nixpkgs.lib.makeLibraryPath buildInputs}"
-
-              cp ${pkgs.writeShellScript "microsoft-azurevpnclient-inner" ''
-                exec ${pkgs.bubblewrap}/bin/bwrap \
-                  --dev-bind / / \
-                  --bind ${renamedCerts}/ssl/certs /etc/ssl/certs \
-                  /run/wrappers/bin/microsoft-azurevpnclient-wrapped "$@"
-              ''} $out/bin/microsoft-azurevpnclient-ns
+              cp ${passthru.wrapper} $out/bin/microsoft-azurevpnclient
+              chmod +x $out/bin/microsoft-azurevpnclient
 
               # TODO:
               # Fix desktop file location
