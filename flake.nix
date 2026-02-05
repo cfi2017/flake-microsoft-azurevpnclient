@@ -101,9 +101,14 @@
               ln -s $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient $out/bin/microsoft-azurevpnclient
               ln -s $out/opt/microsoft/microsoft-azurevpnclient/lib $out
 
-              makeWrapper ${pkgs.bubblewrap}/bin/bwrap $out/bin/microsoft-azurevpnclient-inner \
-                --add-flags "--dev-bind / / --bind ${renamedCerts}/ssl/certs /etc/ssl/certs" \
-                --add-flags "$out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient" \
+              cp ${pkgs.writeShellScript "microsoft-azurevpnclient-wrapped" ''
+                exec ${pkgs.bubblewrap}/bin/bwrap \
+                  --dev-bind / / \
+                  --bind ${renamedCerts}/ssl/certs /etc/ssl/certs \
+                  $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient "$@"
+              ''} $out/bin/microsoft-azurevpnclient-wrapped
+
+              wrapProgram $out/bin/microsoft-azurevpnclient-wrapped \
                 --prefix PATH : "${pkgs.openvpn}/bin" \
                 --prefix PATH : "${pkgs.zenity}/bin" \
                 --prefix LD_LIBRARY_PATH : ${nixpkgs.lib.makeLibraryPath buildInputs} \
@@ -135,11 +140,11 @@
     }: {
       environment.systemPackages = [self.packages.${pkgs.system}.default];
 
-      security.wrappers.microsoft-azurevpnclient = {
+      security.wrappers."microsoft-azurevpnclient-wrapped" = {
         owner = "root";
         group = "root";
         capabilities = "cap_net_admin+eip";
-        source = "${self.packages.${pkgs.system}.default}/bin/microsoft-azurevpnclient-inner";
+        source = "${self.packages.${pkgs.system}.default}/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient";
       };
     };
   };
