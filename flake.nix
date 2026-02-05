@@ -101,18 +101,16 @@
               ln -s $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient $out/bin/microsoft-azurevpnclient
               ln -s $out/opt/microsoft/microsoft-azurevpnclient/lib $out
 
-              cp ${pkgs.writeShellScript "microsoft-azurevpnclient-wrapped" ''
+              makeWrapper /run/wrappers/bin/microsoft-azurevpnclient-wrapped $out/bin/microsoft-azurevpnclient \
+                --prefix PATH : "${pkgs.openvpn}/bin:${pkgs.zenity}/bin" \
+                --prefix LD_LIBRARY_PATH : "$out/lib:${nixpkgs.lib.makeLibraryPath buildInputs}"
+
+              cp ${pkgs.writeShellScript "microsoft-azurevpnclient-inner" ''
                 exec ${pkgs.bubblewrap}/bin/bwrap \
                   --dev-bind / / \
                   --bind ${renamedCerts}/ssl/certs /etc/ssl/certs \
-                  $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient "$@"
-              ''} $out/bin/microsoft-azurevpnclient-wrapped
-
-              wrapProgram $out/bin/microsoft-azurevpnclient-wrapped \
-                --prefix PATH : "${pkgs.openvpn}/bin" \
-                --prefix PATH : "${pkgs.zenity}/bin" \
-                --prefix LD_LIBRARY_PATH : ${nixpkgs.lib.makeLibraryPath buildInputs} \
-                --prefix LD_LIBRARY_PATH : "$out/lib"
+                  /run/wrappers/bin/microsoft-azurevpnclient-wrapped "$@"
+              ''} $out/bin/microsoft-azurevpnclient-ns
 
               # TODO:
               # Fix desktop file location
