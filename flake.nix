@@ -137,8 +137,8 @@
       environment.systemPackages = [self.packages.${pkgs.system}.default];
 
       security.wrappers."microsoft-azurevpnclient-w" = {
-        # owner = "root";
-        # group = "root";
+        owner = "root";
+        group = "root";
         capabilities = "cap_net_admin+eip";
         source = "${self.packages.${pkgs.system}.default}/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient";
       };
