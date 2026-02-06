@@ -107,7 +107,7 @@
                 exec ${pkgs.bubblewrap}/bin/bwrap \
                   --dev-bind / / \
                   --bind ${renamedCerts}/ssl/certs /etc/ssl/certs \
-                  $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient "$@"
+                  /run/wrappers/bin/microsoft-azurevpnclient-w "$@"
               ''} $out/bin/microsoft-azurevpnclient
 
               # TODO:
@@ -136,9 +136,9 @@
     }: {
       environment.systemPackages = [self.packages.${pkgs.system}.default];
 
-      security.wrappers."microsoft-azurevpnclient" = {
-        owner = "root";
-        group = "root";
+      security.wrappers."microsoft-azurevpnclient-w" = {
+        # owner = "root";
+        # group = "root";
         capabilities = "cap_net_admin+eip";
         source = "${self.packages.${pkgs.system}.default}/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient";
       };
