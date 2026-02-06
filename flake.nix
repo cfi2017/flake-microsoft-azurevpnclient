@@ -89,6 +89,15 @@
             #   addAutoPatchelfSearchPath opt/microsoft/microsoft-azurevpnclient/lib
             # '';
 
+            bubblewrapped = pkgs.writeShellScript "microsoft-azurevpnclient" ''
+              export PATH="${pkgs.openvpn}/bin:${pkgs.zenity}/bin:$PATH"
+              export LD_LIBRARY_PATH="$out/lib:${nixpkgs.lib.makeLibraryPath buildInputs}:$LD_LIBRARY_PATH:$out/lib"
+              exec ${pkgs.bubblewrap}/bin/bwrap \
+                --dev-bind / / \
+                --bind ${renamedCerts}/ssl/certs /etc/ssl/certs \
+                $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient "$@"
+            '';
+
             # runtimeDependencies = [ "$out/lib" ];
 
             installPhase = ''
@@ -98,18 +107,10 @@
 
               mkdir -p $out/bin
 
-              ln -s $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient $out/bin/microsoft-azurevpnclient
               ln -s $out/opt/microsoft/microsoft-azurevpnclient/lib $out
 
-              cp ${pkgs.writeShellScript "microsoft-azurevpnclient-wrapper" ''
-                export PATH="${pkgs.openvpn}/bin:${pkgs.zenity}/bin:$PATH"
-                export LD_LIBRARY_PATH="$out/lib:${nixpkgs.lib.makeLibraryPath buildInputs}:$LD_LIBRARY_PATH"
-                exec ${pkgs.bubblewrap}/bin/bwrap \
-                  --dev-bind / / \
-                  --bind ${renamedCerts}/ssl/certs /etc/ssl/certs \
-                  $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient "$@"
-              ''} $out/bin/microsoft-azurevpnclient-inner
-              chmod +x $out/bin/microsoft-azurevpnclient-inner
+              # TODO: this doesnt feel right
+              cp ${bubblewrapped}/bin/microsoft-azurevpnclient $out/bin/microsoft-azurevpnclient
 
               # TODO:
               # Fix desktop file location
@@ -137,11 +138,11 @@
     }: {
       environment.systemPackages = [self.packages.${pkgs.system}.default];
 
-      security.wrappers."microsoft-azurevpnclient-wrapped" = {
+      security.wrappers."microsoft-azurevpnclient" = {
         owner = "root";
         group = "root";
         capabilities = "cap_net_admin+eip";
-        source = "${self.packages.${pkgs.system}.default}/bin/microsoft-azurevpnclient-inner";
+        source = "${self.packages.${pkgs.system}.default}/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient";
       };
     };
   };
