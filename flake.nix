@@ -89,15 +89,6 @@
             #   addAutoPatchelfSearchPath opt/microsoft/microsoft-azurevpnclient/lib
             # '';
 
-            bubblewrapped = pkgs.writeShellScript "microsoft-azurevpnclient" ''
-              export PATH="${pkgs.openvpn}/bin:${pkgs.zenity}/bin:$PATH"
-              export LD_LIBRARY_PATH="$out/lib:${nixpkgs.lib.makeLibraryPath buildInputs}:$LD_LIBRARY_PATH:$out/lib"
-              exec ${pkgs.bubblewrap}/bin/bwrap \
-                --dev-bind / / \
-                --bind ${renamedCerts}/ssl/certs /etc/ssl/certs \
-                $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient "$@"
-            '';
-
             # runtimeDependencies = [ "$out/lib" ];
 
             installPhase = ''
@@ -110,7 +101,14 @@
               ln -s $out/opt/microsoft/microsoft-azurevpnclient/lib $out
 
               # TODO: this doesnt feel right
-              cp ${bubblewrapped} $out/bin/microsoft-azurevpnclient
+              cp ${pkgs.writeShellScript "microsoft-azurevpnclient" ''
+                export PATH="${pkgs.openvpn}/bin:${pkgs.zenity}/bin:$PATH"
+                export LD_LIBRARY_PATH="$out/lib:${nixpkgs.lib.makeLibraryPath buildInputs}:$LD_LIBRARY_PATH:$out/lib"
+                exec ${pkgs.bubblewrap}/bin/bwrap \
+                  --dev-bind / / \
+                  --bind ${renamedCerts}/ssl/certs /etc/ssl/certs \
+                  $out/opt/microsoft/microsoft-azurevpnclient/microsoft-azurevpnclient "$@"
+              ''} $out/bin/microsoft-azurevpnclient
 
               # TODO:
               # Fix desktop file location
