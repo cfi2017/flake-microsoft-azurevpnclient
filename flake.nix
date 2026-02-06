@@ -110,7 +110,7 @@
               ln -s $out/opt/microsoft/microsoft-azurevpnclient/lib $out
 
               # TODO: this doesnt feel right
-              cp ${bubblewrapped}/bin/microsoft-azurevpnclient $out/bin/microsoft-azurevpnclient
+              cp ${bubblewrapped} $out/bin/microsoft-azurevpnclient
 
               # TODO:
               # Fix desktop file location
