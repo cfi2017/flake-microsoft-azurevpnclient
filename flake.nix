@@ -46,21 +46,27 @@
               group = "root";
             };
 
-            # Unbundle CA certificates into /etc/ssl/certs/ so the client can find them.
-            # Uses import-from-derivation on cacert.unbundled.
+            # Unbundle CA certificates into /etc/ssl/certs/ as clean PEM files.
+            # The raw unbundled certs contain metadata and TRUSTED CERTIFICATE
+            # blocks that aren't standard PEM — strip them to just the
+            # -----BEGIN CERTIFICATE----- / -----END CERTIFICATE----- block.
             environment.etc =
               let
-                certsDir = pkgs.cacert.unbundled + "/etc/ssl/certs";
+                cleanCerts = pkgs.runCommand "clean-ca-certs" { } ''
+                  mkdir -p $out
+                  for f in ${pkgs.cacert.unbundled}/etc/ssl/certs/*.crt; do
+                    name="$(basename "$f" .crt).pem"
+                    awk '/-----BEGIN CERTIFICATE-----/{p=1} p; /-----END CERTIFICATE-----/{exit}' \
+                      "$f" > "$out/$name"
+                  done
+                '';
               in
               lib.mapAttrs' (
                 name: _:
-                let
-                  pemName = builtins.replaceStrings [ ".crt" ] [ ".pem" ] name;
-                in
-                lib.nameValuePair "ssl/certs/${pemName}" {
-                  text = builtins.readFile "${certsDir}/${name}";
+                lib.nameValuePair "ssl/certs/${name}" {
+                  text = builtins.readFile "${cleanCerts}/${name}";
                 }
-              ) (builtins.readDir certsDir);
+              ) (builtins.readDir cleanCerts);
           };
         };
     };
